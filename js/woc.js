@@ -1,11 +1,13 @@
 noise.seed(Math.random());
-var numLines = 10;
-
-var maxLen = 1000;
+var numLines = 100;
+var dotTol = 0.5;
+var diamondLimit = .1;
+var maxLen = 2000;
 var xMax = 1000;
 var yMax = 800;
-var minSize = 5;
+var minSize = 10;
 var maxSize = 20;
+var lineSpacing = 10;
 
 var lines = [];
 var dots = [];
@@ -15,19 +17,25 @@ for (var i = 0; i < numLines; i++) {
   var x = Math.random();
   var y = Math.random();
   var line = getLine(x, y);
-  lines.push(line);
-  dots.push(getDots(line, x, y));
+  if (checkline(line)) {
+    lines.push(line);
+    dots.push(getDots(line, x, y));
+  }
 }
-
 // draw the stuff
 lines.forEach(function(line) {
   Path.Line(line);
 });
 dots.forEach(function(dotList) {
   dotList.forEach(function(dot) {
-    var circle = Path.Circle(new Point(dot.x, dot.y), dot.size);
-    circle.strokeColor = 'black';
-    circle.fillColor = 'white';
+    var dot;
+    if (dot.type === 'dot') {
+      dot = Path.Circle(new Point(dot.x, dot.y), dot.size);
+    } else if (dot.type === 'diamond') {
+      dot = new Path(dot.path);
+    }
+    dot.strokeColor = 'black';
+    dot.fillColor = 'white';
   });
 });
 
@@ -85,40 +93,68 @@ function getDots(line, x, y) {
 
   var elements = [];
   segments.forEach(function(seg) {
-    // do an upside-down bell curve
-    var r = Math.min(0.9, Math.max(0.1, nilrep));
-    var numDots = Math.round(Math.pow(r, -0.5) * Math.pow(1 - r, -0.5) * 3) - 5;
-    console.log(numDots);
+    if (Math.random() > dotTol) {
+      var numDots = Math.round(Math.abs(nilrep) * Math.abs(nilrep) * 5) + 1;
+      console.log(numDots);
+      var off = (nilrep + perlin) / 2;
+      var dx = off * (seg.end[0] - seg.start[0]) + seg.start[0];
+      var dy = off * (seg.end[1] - seg.start[1]) + seg.start[1];
 
-    var dotSize = Math.round(nilrep * (maxSize - minSize)) + minSize;
-    // find the center of the dot cluster
-    var off = (nilrep + perlin) / 2;
-    var segCenter = [
-      off * (seg.end[0] - seg.start[0]) + seg.start[0],
-      off * (seg.end[1] - seg.start[1]) + seg.start[1],
-    ];
+      // get each dot in the cluster
+      if (Math.random() > diamondLimit) {
+        var dotFactor = perlin;
+        var dotSize = Math.round(dotFactor * (maxSize - minSize)) + minSize;
 
-    var dotsLength = dotSize * numDots * 2;
-    // get each dot in the cluster
-    for (var d = 0; d < numDots; d++) {
-      
+        for (var d = 0; d < numDots; d++) {
+          if (seg.end[0] === seg.start[0]) {
+            // vertical
+            dy -= dotSize * 2 * (numDots - 1 - d);
+          } else {
+            dx -= dotSize * 2 * (numDots - 1 - d);
+          }
+
+          elements.push({
+            type: 'dot',
+            x: dx,
+            y: dy,
+            size: dotSize,
+          });
+        }
+      } else {
+        // draw diamond
+        for (var d = 0; d < numDots; d++) {
+          var diamondPath = [];
+          var thin = minSize / 3;
+          var long = minSize * 5;
+          if (seg.end[0] === seg.start[0]) {
+            // vertical
+            dy -= thin * 2 * (numDots - 1 - d);
+            diamondPath.push(new Point(dx, dy - thin));
+            diamondPath.push(new Point(dx - long, dy));
+            diamondPath.push(new Point(dx, dy + thin));
+            diamondPath.push(new Point(dx + long, dy));
+            diamondPath.push(new Point(dx, dy - thin));
+          } else {
+            dx -= thin * 2 * (numDots - 1 - d);
+            diamondPath.push(new Point(dx - thin, dy));
+            diamondPath.push(new Point(dx, dy - long));
+            diamondPath.push(new Point(dx + thin, dy));
+            diamondPath.push(new Point(dx, dy + long));
+            diamondPath.push(new Point(dx - thin, dy));
+          }
+
+          elements.push({
+            type: 'diamond',
+            path: diamondPath,
+          });
+        }
+      }
     }
-
-    elements.push({
-      type: 'dot',
-      x: segCenter[0],
-      y: segCenter[1],
-      size: dotSize,
-    });
-
-    // elements.push({
-    //   type: 'dot',
-    //   x: seg.start[0],
-    //   y: seg.start[1],
-    //   size: dotSize,
-    // });
-    // elements.push({ type: 'dot', x: seg.end[0], y: seg.end[1], size: maxSize });
   });
 
   return elements;
+}
+
+function checkline(line) {
+  return true;
 }
