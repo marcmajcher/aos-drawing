@@ -1,13 +1,13 @@
 noise.seed(Math.random());
-var numLines = 100;
-var dotTol = 0.5;
-var diamondLimit = .1;
+var numLines = 200;
+var dotTol = 0.4;
+var diamondLimit = 0.1;
 var maxLen = 2000;
 var xMax = 1000;
 var yMax = 800;
-var minSize = 10;
+var minSize = 5;
 var maxSize = 20;
-var lineSpacing = 10;
+var lineSpace = minSize * 2;
 
 var lines = [];
 var dots = [];
@@ -42,7 +42,7 @@ dots.forEach(function(dotList) {
 function getLine(x, y) {
   // get perlin for coords
   var perlin = noise.simplex2(x, y);
-  var length = Math.round(maxLen * perlin);
+  var length = Math.round(maxLen * Math.abs(perlin));
 
   // get center
   var cx = Math.round(x * xMax);
@@ -94,16 +94,18 @@ function getDots(line, x, y) {
   var elements = [];
   segments.forEach(function(seg) {
     if (Math.random() > dotTol) {
+      var dotFactor = Math.max(perlin, 0);
+      var dotSize = Math.round(dotFactor * (maxSize - minSize)) + minSize;
       var numDots = Math.round(Math.abs(nilrep) * Math.abs(nilrep) * 5) + 1;
-      console.log(numDots);
+      // if (dotSize === minSize) {
+      //   numDots *=1.5;
+      // }
       var off = (nilrep + perlin) / 2;
       var dx = off * (seg.end[0] - seg.start[0]) + seg.start[0];
       var dy = off * (seg.end[1] - seg.start[1]) + seg.start[1];
 
       // get each dot in the cluster
       if (Math.random() > diamondLimit) {
-        var dotFactor = perlin;
-        var dotSize = Math.round(dotFactor * (maxSize - minSize)) + minSize;
 
         for (var d = 0; d < numDots; d++) {
           if (seg.end[0] === seg.start[0]) {
@@ -124,8 +126,8 @@ function getDots(line, x, y) {
         // draw diamond
         for (var d = 0; d < numDots; d++) {
           var diamondPath = [];
-          var thin = minSize / 3;
-          var long = minSize * 5;
+          var thin = minSize /2;
+          var long = minSize * 10;
           if (seg.end[0] === seg.start[0]) {
             // vertical
             dy -= thin * 2 * (numDots - 1 - d);
@@ -156,5 +158,30 @@ function getDots(line, x, y) {
 }
 
 function checkline(line) {
+  if (line.from[0] === line.to[0]) {
+    //vertical
+    var vlines = lines.filter(function(e) {
+      return e.from[0] === e.to[0];
+    });
+    var x = line.from[0];
+    for (var i = 0; i < vlines.length; i++) {
+      var lineX = vlines[i].from[0];
+      if (x < lineX + lineSpace && x > lineX - lineSpace) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  var hlines = lines.filter(function(e) {
+    return e.from[1] === e.to[1];
+  });
+  var y = line.from[1];
+  for (var i = 0; i < hlines.length; i++) {
+    var lineY = hlines[i].from[1];
+    if (y < lineY + lineSpace && y > lineY - lineSpace) {
+      return false;
+    }
+  }
   return true;
 }
