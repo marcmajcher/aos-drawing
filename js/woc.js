@@ -1,9 +1,11 @@
 noise.seed(Math.random());
-var numLines = 100;
+var numLines = 10;
 
 var maxLen = 1000;
 var xMax = 1000;
 var yMax = 800;
+var minSize = 5;
+var maxSize = 20;
 
 var lines = [];
 var dots = [];
@@ -60,18 +62,14 @@ function getLine(x, y) {
 }
 
 function getDots(line, x, y) {
-  var minSize = 5;
-  var maxSize = 20;
   var perlin = noise.simplex2(x, y);
   var nilrep = noise.simplex2(y, x);
 
   var maxElements = Math.ceil(Math.abs(perlin) * 4);
   var numElements = Math.ceil(Math.random() * maxElements) + 1;
 
+  // break the line into a number of segments, put 1-5 dots on each segment
   var segments = [];
-  // console.log('X', x, 'Y', y);
-  // console.log(' numElements:', numElements);
-
   for (var i = 0; i < numElements; i++) {
     segments.push({
       start: [
@@ -87,25 +85,40 @@ function getDots(line, x, y) {
 
   var elements = [];
   segments.forEach(function(seg) {
-    // var numDots = Math.ceil(nilrep*5);
     // do an upside-down bell curve
-    var numDots = Math.floor( (perlin + nilrep)*5 +5);
-    console.log(numDots)
-    for (var d=0; d<numElements; d++) {
+    var r = Math.min(0.9, Math.max(0.1, nilrep));
+    var numDots = Math.round(Math.pow(r, -0.5) * Math.pow(1 - r, -0.5) * 3) - 5;
+    console.log(numDots);
 
+    var dotSize = Math.round(nilrep * (maxSize - minSize)) + minSize;
+    // find the center of the dot cluster
+    var off = (nilrep + perlin) / 2;
+    var segCenter = [
+      off * (seg.end[0] - seg.start[0]) + seg.start[0],
+      off * (seg.end[1] - seg.start[1]) + seg.start[1],
+    ];
+
+    var dotsLength = dotSize * numDots * 2;
+    // get each dot in the cluster
+    for (var d = 0; d < numDots; d++) {
+      
     }
+
     elements.push({
       type: 'dot',
-      x: seg.start[0],
-      y: seg.start[1],
-      size: minSize,
+      x: segCenter[0],
+      y: segCenter[1],
+      size: dotSize,
     });
+
+    // elements.push({
+    //   type: 'dot',
+    //   x: seg.start[0],
+    //   y: seg.start[1],
+    //   size: dotSize,
+    // });
     // elements.push({ type: 'dot', x: seg.end[0], y: seg.end[1], size: maxSize });
   });
 
   return elements;
-  [
-    { x: line.from[0], y: line.from[1], size: minSize },
-    { x: line.to[0], y: line.to[1], size: maxSize },
-  ];
 }
